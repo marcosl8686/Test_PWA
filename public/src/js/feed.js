@@ -26,21 +26,27 @@ function closeCreatePostModal() {
   createPostArea.style.display = 'none';
 }
 
-// function onSaveButtonClicked(event) {
-//   console.log('click');
-//   if('caches' in window) {
-//     caches.open('user-requested-api')
-//     .then(function(cache){
-//       cache.add('https://httpbin.org/get');
-//       cache.add('/src/images/sf-boat.jpg');
-//     });
-//   }
-  
-// }
-
 shareImageButton.addEventListener('click', openCreatePostModal);
 
 closeCreatePostModalButton.addEventListener('click', closeCreatePostModal);
+
+// Currently not in use, allows to save assets in cache on demand otherwise
+function onSaveButtonClicked(event) {
+  console.log('clicked');
+  if ('caches' in window) {
+    caches.open('user-requested')
+      .then(function(cache) {
+        cache.add('https://httpbin.org/get');
+        cache.add('/src/images/sf-boat.jpg');
+      });
+  }
+}
+
+function clearCards() {
+  while(sharedMomentsArea.hasChildNodes()) {
+    sharedMomentsArea.removeChild(sharedMomentsArea.lastChild)
+  }
+}
 
 function createCard() {
   var cardWrapper = document.createElement('div');
@@ -52,6 +58,7 @@ function createCard() {
   cardTitle.style.height = '180px';
   cardWrapper.appendChild(cardTitle);
   var cardTitleTextElement = document.createElement('h2');
+  cardTitleTextElement.style.color = 'white';
   cardTitleTextElement.className = 'mdl-card__title-text';
   cardTitleTextElement.textContent = 'San Francisco Trip';
   cardTitle.appendChild(cardTitleTextElement);
@@ -61,17 +68,39 @@ function createCard() {
   cardSupportingText.style.textAlign = 'center';
   // var cardSaveButton = document.createElement('button');
   // cardSaveButton.textContent = 'Save';
+  // cardSaveButton.addEventListener('click', onSaveButtonClicked);
   // cardSupportingText.appendChild(cardSaveButton);
-  // cardSupportingText.addEventListener('click', onSaveButtonClicked)
   cardWrapper.appendChild(cardSupportingText);
   componentHandler.upgradeElement(cardWrapper);
   sharedMomentsArea.appendChild(cardWrapper);
 }
 
-fetch('https://httpbin.org/get')
+var url = 'https://httpbin.org/get';
+var networkDataReceived = false;
+
+fetch(url)
   .then(function(res) {
     return res.json();
   })
   .then(function(data) {
+    networkDataReceived = true;
+    console.log('from web', data)
+    clearCards();
     createCard();
   });
+
+
+if ('caches' in window) {
+  caches.match(url).then(function(response){
+    if (response) {
+      return response.json();
+    }
+  }).then(function(data){
+    console.log('from cache', data)
+    if(!networkDataReceived) {
+      clearCards();
+      createCard();
+    }
+    
+  })
+}
